@@ -1,0 +1,12 @@
+[project]
+name = "tts-chatterbox"
+version = "0.1.0"
+description = "Add your description here"
+requires-python = "==3.11.*"
+dependencies = [
+    "chatterbox-tts>=0.1.6",
+    "numpy==1.25.2",
+    "ml_dtypes>0.5.0",
+    "setuptools>=80.10.2",
+    "pync>=2.0.3",
+]
