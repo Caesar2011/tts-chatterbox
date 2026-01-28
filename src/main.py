@@ -1,6 +1,5 @@
 import os
 import sys
-import pync
 import torch
 import torchaudio as ta
 from tqdm import tqdm
@@ -22,8 +21,8 @@ class OptimalTextSplitter:
             self.costs = {
                 'double_newline': 0,
                 'single_newline': 10,
-                'sentence_end': 50,
-                'word_end': 200,
+                'sentence_end': 100,
+                'word_end': 1000,
                 'start': 0
             }
         else:
@@ -112,20 +111,19 @@ def main():
 
     os.makedirs(OUTPUT_DIR, exist_ok=True)
 
-    # Monkey patch torch.load to default to 'cpu'
-    original_torch_load = torch.load
-
-    def patched_torch_load(f, map_location=None, **kwargs):
-        if map_location is None: map_location = 'cpu'
-        return original_torch_load(f, map_location=map_location, **kwargs)
-
-    torch.load = patched_torch_load
-
     # Setup model
     device = "cuda" if torch.cuda.is_available() else "cpu"
+    if device == "cpu":
+        # Monkey patch torch.load to default to 'cpu'
+        original_torch_load = torch.load
+        def patched_torch_load(f, map_location=None, **kwargs):
+            if map_location is None: map_location = 'cuda'
+            return original_torch_load(f, map_location=map_location, **kwargs)
+        torch.load = patched_torch_load
+
     print(f"Using device: {device}")
     print("Loading TTS model...")
-    multilingual_model = ChatterboxMultilingualTTS.from_pretrained(device='cpu')
+    multilingual_model = ChatterboxMultilingualTTS.from_pretrained(device=device)
     print("Model loaded.")
 
     base_name = os.path.splitext(os.path.basename(text_file_path))[0]
@@ -178,7 +176,6 @@ def main():
 
             if file_size_mb <= max_allowed_size_mb:
                 tqdm.write(f"SUCCESS: Part {part_num} generated successfully (Size: {file_size_mb:.2f} MB).")
-                send_notification("Speech Generation Success", f"Part {part_num} saved to {output_filename}")
                 break
             else:
                 tqdm.write(
@@ -186,24 +183,8 @@ def main():
                 if attempt == MAX_RETRIES:
                     tqdm.write(f"ERROR: Part {part_num} failed after {MAX_RETRIES} attempts. Renaming to error file.")
                     os.rename(output_path, error_path)
-                    send_notification("Speech Generation FAILED", f"Part {part_num} saved as {error_filename}")
 
     print("\nAll parts have been processed.")
-
-
-def send_notification(title, message):
-    """Sends a desktop notification on macOS."""
-    try:
-        pync.notify(
-            message,
-            title=title,
-            appIcon='https://upload.wikimedia.org/wikipedia/commons/thumb/c/c3/Python-logo-notext.svg/960px-Python-logo-notext.svg.png'
-        )
-    except Exception:
-        # Silently fail if notification doesn't work, but log to console.
-        # tqdm.write is not available here, so we use print.
-        # print(f"Could not send notification: {e}")
-        pass
 
 
 if __name__ == "__main__":
