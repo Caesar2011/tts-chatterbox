@@ -10,11 +10,17 @@ dependencies = [
     "setuptools>=70.2.0",
     "torch>=2.6.0",
     "torchaudio>=2.6.0",
+    "pydub>=0.25.1",
+    "soundfile>=0.13.1",
+    "openai-whisper",
+    "pyrnnoise>=0.4.3",
+    "auto-editor>=29.3.1",
 ]
 
 [tool.uv.sources]
-torch = { index = "pytorch" }
-torchaudio = { index = "pytorch" }
+openai-whisper = { git = "https://github.com/openai/whisper.git" }
+#torch = { index = "pytorch" }
+#torchaudio = { index = "pytorch" }
 
 [[tool.uv.index]]
 name = "pytorch"
