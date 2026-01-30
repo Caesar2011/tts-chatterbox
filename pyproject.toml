@@ -1,28 +1,69 @@
 [project]
-name = "tts-chatterbox"
-version = "0.1.0"
-description = "Add your description here"
-requires-python = "==3.11.*"
+name = "qwen-audiobook-producer"
+version = "1.0.0"
+description = "A robust pipeline for generating multi-speaker audiobooks using Qwen3-TTS."
+requires-python = ">=3.11"
 dependencies = [
-    "chatterbox-tts>=0.1.6",
-    "numpy==1.25.2",
-    "ml_dtypes>0.5.0",
-    "setuptools>=70.2.0",
-    "torch>=2.6.0",
-    "torchaudio>=2.6.0",
+    "qwen-tts>=0.0.5",
+    "torch>=2.3.0",
+    "torchaudio>=2.3.0",
     "pydub>=0.25.1",
-    "soundfile>=0.13.1",
-    "openai-whisper",
-    "pyrnnoise>=0.4.3",
-    "auto-editor>=29.3.1",
+    "tqdm>=4.66.0",
+    "lxml>=5.2.0",
+    "soundfile>=0.12.1",
+    # Note: openai-whisper might need a specific commit if you encounter issues
+    "openai-whisper @ git+https://github.com/openai/whisper.git",
+    "flash-attn>=2.5.0; sys_platform != 'win32'",
 ]
 
 [tool.uv.sources]
-openai-whisper = { git = "https://github.com/openai/whisper.git" }
-#torch = { index = "pytorch" }
-#torchaudio = { index = "pytorch" }
+torch = { index = "pytorch" }
+torchaudio = { index = "pytorch" }
 
 [[tool.uv.index]]
 name = "pytorch"
+# Change cu121 to your CUDA version (e.g., cu118, cpu)
 url = "https://download.pytorch.org/whl/cu124"
 explicit = true
+
+[tool.uv.extra-build-dependencies]
+flash-attn = ["torch"]
+
+[tool.audiobook_producer.settings]
+# --- TTS Model Settings ---
+# Use the 1.7B models for highest quality. Use 0.6B for lower VRAM requirements.
+voice_design_model = "Qwen/Qwen3-TTS-12Hz-1.7B-VoiceDesign"
+voice_clone_model = "Qwen/Qwen3-TTS-12Hz-1.7B-Base"
+tokenizer_model = "Qwen/Qwen3-TTS-Tokenizer-12Hz"
+
+# --- Text Splitting ---
+min_chunk_len = 150
+max_chunk_len = 250
+
+# --- Synthesis & Validation ---
+whisper_model_name = "base" # "base", "small", "medium"
+validation_score_threshold = 0.90
+max_candidates_per_chunk = 5
+early_abort_success_count = 2
+
+# --- Post-Processing Pipeline ---
+use_loudness_normalization = true
+mp3_bitrate = "192k"
+mp3_artist = "Qwen Audiobook Producer"
+
+# --- EBU R128 Loudness Normalization Settings ---
+ebu_target_loudness = -23.0 # LUFS for spoken word
+ebu_true_peak = -2.0       # dBTP
+ebu_loudness_range = 7.0   # LU
+
+# --- Hardware ---
+# Set to 'cpu' if you have no compatible GPU
+device = "cuda:0"
+torch_dtype = "bfloat16" # "bfloat16" or "float16"
+attn_implementation = "sdpa"
+
+# --- Pause Durations (in milliseconds) ---
+[tool.audiobook_producer.settings.pauses]
+small = 200    # For short thought pauses or hesitations.
+medium = 500  # For scene changes or topic shifts.
+large = 1500   # For major section breaks (use sparingly).
